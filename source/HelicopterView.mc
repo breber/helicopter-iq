@@ -4,7 +4,8 @@ using Toybox.System as Sys;
 using Toybox.Timer as Timer;
 
 var started = false;
-var updateRate = 200;
+var gameOver = false;
+var updateRate = 100;
 var shapePositionX = 0;
 var shapePositionY = 0;
 
@@ -24,12 +25,20 @@ class HelicopterDelegate extends Ui.InputDelegate {
     }
 
     function onTap() {
-        callback();
+        if (gameOver) {
+            started = false;
+            gameOver = false;
+            Ui.requestUpdate();
+        } else {
+            callback();
+        }
     }
 
     function onHold() {
-        shapePositionY -= 5;
-        timer.start(method(:callback), updateRate, true);
+        if (!gameOver) {
+            shapePositionY -= 5;
+            timer.start(method(:callback), updateRate, true);
+        }
     }
 
     function onRelease() {
@@ -69,6 +78,10 @@ class HelicopterView extends Ui.View {
         height = dc.getHeight();
         width = dc.getWidth();
 
+        // Clear the screen
+        dc.setColor(Gfx.COLOR_TRANSPARENT, Gfx.COLOR_BLACK);
+        dc.clear();
+
         // If we haven't started, set the initial position,
         // and create the initial blocks
         if (!started) {
@@ -77,35 +90,9 @@ class HelicopterView extends Ui.View {
             shapePositionY = height / 2;
 
             createBlocks();
-        } else {
-            if (started && !viewStarted) {
-                timer.start(method(:onTimer), updateRate, true);
-                viewStarted = true;
-            }
-
-            // Once we have started, check to make sure the current
-            // position doesn't overlap with any of the blocks, or is
-            // off the edge
-            var ok = true;
-
-            // Verify not off the top/bottom
-            ok = ok && ((shapePositionY + (shapeHeight / 2)) < height);
-            ok = ok && ((shapePositionY - (shapeHeight / 2)) > 0);
-
-            // TODO: check all blocks
-
-            if (!ok) {
-                Sys.println("fail!");
-                // TODO: show a fail box
-                timer.stop();
-            }
         }
 
-        // Clear the screen
-        dc.setColor(Gfx.COLOR_TRANSPARENT, Gfx.COLOR_BLACK);
-        dc.clear();
-
-        // Draw the helecopter shape
+        // Draw the player shape
         dc.setColor(Gfx.COLOR_BLUE, Gfx.COLOR_TRANSPARENT);
         dc.fillCircle(shapePositionX, shapePositionY, shapeHeight);
 
@@ -113,13 +100,47 @@ class HelicopterView extends Ui.View {
         dc.setColor(Gfx.COLOR_GREEN, Gfx.COLOR_TRANSPARENT);
         for (var i = 0; i < blocks.size(); ++i) {
             var block = blocks[i];
-
             dc.fillRectangle(block.x, block.y, block.width, block.height);
+        }
+
+        // If the user has clicked on the screen, but we haven't started
+        // the processing on the view, start the timer
+        if (started && !viewStarted) {
+            timer.start(method(:onTimer), updateRate, true);
+            viewStarted = true;
+        }
+
+        // If the bounds check fails, stop the timer and show
+        // a game over screen
+        if (!checkBounds()) {
+            timer.stop();
+            gameOver = true;
+
+            dc.setColor(Gfx.COLOR_RED, Gfx.COLOR_TRANSPARENT);
+            dc.drawText((width / 2), (height / 2), Gfx.FONT_LARGE, "Game Over!", Gfx.TEXT_JUSTIFY_CENTER);
+            dc.drawText((width / 2), (height / 2) + 20, Gfx.FONT_SMALL, "Tap screen to play again", Gfx.TEXT_JUSTIFY_CENTER);
+
+            started = false;
+            viewStarted = false;
         }
     }
 
+    function checkBounds() {
+        // Check to make sure the current position doesn't overlap
+        // with any of the blocks, or is off the edge
+        var ok = true;
+
+        // Verify not off the top/bottom
+        ok = ok && ((shapePositionY + (shapeHeight / 2)) < height);
+        ok = ok && ((shapePositionY - (shapeHeight / 2)) > 0);
+
+        // TODO: check all blocks
+
+        return ok;
+    }
+
     function createBlocks() {
-        var currentX = 35;
+        var currentX = width / 2;
 
         for (var i = 0; i < blocks.size(); ++i) {
             var blockHeight = Rand.nextInt(height - (5 * shapeHeight));
