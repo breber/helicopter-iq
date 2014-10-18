@@ -1,14 +1,17 @@
 using Toybox.WatchUi as Ui;
 using Toybox.Graphics as Gfx;
 using Toybox.System as Sys;
-using Toybox.Lang as Lang;
+using Toybox.Timer as Timer;
 
 var started = false;
+var updateRate = 200;
 var shapePositionX = 0;
 var shapePositionY = 0;
 
 class HelicopterDelegate extends Ui.InputDelegate {
-    function onTap() {
+    var timer = new Timer.Timer();
+
+    function callback() {
         // On the first tap, start the game
         // All other taps are considered input to the
         // game, and we adjust the shape's Y position
@@ -16,32 +19,70 @@ class HelicopterDelegate extends Ui.InputDelegate {
             shapePositionY -= 10;
         } else {
             started = true;
+            Ui.requestUpdate();
         }
+    }
 
-        Ui.requestUpdate();
+    function onTap() {
+        callback();
+    }
+
+    function onHold() {
+        shapePositionY -= 5;
+        timer.start(method(:callback), updateRate, true);
+    }
+
+    function onRelease() {
+        timer.stop();
     }
 }
 
 class HelicopterView extends Ui.View {
-    var blocks = new [3];
     const shapeHeight = 5;
+    var viewStarted = false;
+    var blocks = new [3];
     var height = 0;
     var width = 0;
+    var timer = new Timer.Timer();
+
+    function onTimer() {
+        // Slide the blocks over
+        for (var i = 0; i < blocks.size(); ++i) {
+            blocks[i].x = blocks[i].x - 5;
+
+            if ((blocks[i].x + blocks[i].width) < 0) {
+                var blockHeight = Rand.nextInt(height - (5 * shapeHeight));
+                var yPos = Rand.nextInt(height - (blockHeight / 2));
+
+                blocks[i] = new Block(blockHeight, width, yPos);
+            }
+        }
+
+        // Slide the cursor down
+        shapePositionY += 5;
+
+        Ui.requestUpdate();
+    }
 
     //! Update the view
     function onUpdate(dc) {
-        Sys.println( "onUpdate" );
         height = dc.getHeight();
         width = dc.getWidth();
 
         // If we haven't started, set the initial position,
         // and create the initial blocks
         if (!started) {
-            shapePositionX = 10;
+            timer.stop();
+            shapePositionX = 15;
             shapePositionY = height / 2;
 
             createBlocks();
         } else {
+            if (started && !viewStarted) {
+                timer.start(method(:onTimer), updateRate, true);
+                viewStarted = true;
+            }
+
             // Once we have started, check to make sure the current
             // position doesn't overlap with any of the blocks, or is
             // off the edge
@@ -51,17 +92,14 @@ class HelicopterView extends Ui.View {
             ok = ok && ((shapePositionY + (shapeHeight / 2)) < height);
             ok = ok && ((shapePositionY - (shapeHeight / 2)) > 0);
 
-            for (var i = 0; i < blocks.size(); ++i) {
-                ok = ok && blocks[i].contains();
-            }
+            // TODO: check all blocks
 
             if (!ok) {
-                Sys.println( "fail!" );
+                Sys.println("fail!");
                 // TODO: show a fail box
+                timer.stop();
             }
         }
-
-        //updateBlocks();
 
         // Clear the screen
         dc.setColor(Gfx.COLOR_TRANSPARENT, Gfx.COLOR_BLACK);
@@ -84,7 +122,7 @@ class HelicopterView extends Ui.View {
         var currentX = 35;
 
         for (var i = 0; i < blocks.size(); ++i) {
-            var blockHeight = Rand.nextInt(height - (4 * shapeHeight));
+            var blockHeight = Rand.nextInt(height - (5 * shapeHeight));
             var yPos = Rand.nextInt(height - (blockHeight / 2));
 
             blocks[i] = new Block(blockHeight, currentX, yPos);
