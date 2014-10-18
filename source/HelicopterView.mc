@@ -6,7 +6,6 @@ using Toybox.Timer as Timer;
 var started = false;
 var gameOver = false;
 var updateRate = 100;
-var shapePositionX = 0;
 var shapePositionY = 0;
 
 class HelicopterDelegate extends Ui.InputDelegate {
@@ -47,6 +46,7 @@ class HelicopterDelegate extends Ui.InputDelegate {
 }
 
 class HelicopterView extends Ui.View {
+    const shapeXPosition = 20;
     const shapeSize = 5;
     var viewStarted = false;
     var blocks = new [3];
@@ -55,15 +55,17 @@ class HelicopterView extends Ui.View {
     var timer = new Timer.Timer();
 
     function onTimer() {
+        const blockSlideDistance = 5;
+
         // Slide the blocks over
         for (var i = 0; i < blocks.size(); ++i) {
-            blocks[i].x = blocks[i].x - 5;
+            blocks[i].x = blocks[i].x - blockSlideDistance;
 
+            // If the block is completely off the left side of
+            // the screen, create a new block off the right side
             if ((blocks[i].x + blocks[i].width) < 0) {
-                var blockHeight = Rand.nextInt(height - (5 * shapeSize));
-                var yPos = Rand.nextInt(height - (blockHeight / 2));
-
-                blocks[i] = new Block(blockHeight, width, yPos);
+                var result = getBlockHeightAndYPosition();
+                blocks[i] = new Block(result["height"], width, result["yPos"]);
             }
         }
 
@@ -86,15 +88,10 @@ class HelicopterView extends Ui.View {
         // and create the initial blocks
         if (!started) {
             timer.stop();
-            shapePositionX = 15;
             shapePositionY = height / 2;
 
             createBlocks();
         }
-
-        // Draw the player shape
-        dc.setColor(Gfx.COLOR_BLUE, Gfx.COLOR_TRANSPARENT);
-        dc.fillCircle(shapePositionX, shapePositionY, shapeSize);
 
         // Draw the blocks
         dc.setColor(Gfx.COLOR_GREEN, Gfx.COLOR_TRANSPARENT);
@@ -102,6 +99,10 @@ class HelicopterView extends Ui.View {
             var block = blocks[i];
             dc.fillRectangle(block.x, block.y, block.width, block.height);
         }
+
+        // Draw the player shape
+        dc.setColor(Gfx.COLOR_BLUE, Gfx.COLOR_TRANSPARENT);
+        dc.fillCircle(shapeXPosition, shapePositionY, shapeSize);
 
         // If the user has clicked on the screen, but we haven't started
         // the processing on the view, start the timer
@@ -131,25 +132,39 @@ class HelicopterView extends Ui.View {
         var ok = true;
 
         // Verify not off the top/bottom
-        ok = ok && ((shapePositionY + (shapeSize / 2)) < height);
-        ok = ok && ((shapePositionY - (shapeSize / 2)) > 0);
+        ok = ok && ((shapePositionY + shapeSize) < height);
+        ok = ok && ((shapePositionY - shapeSize) > 0);
 
         // Check all blocks for intersections
         for (var i = 0; i < blocks.size(); ++i) {
-            ok = ok && !blocks[i].intersects(shapePositionX, shapePositionY, shapeSize);
+            ok = ok && !blocks[i].intersects(shapeXPosition, shapePositionY, shapeSize);
         }
 
         return ok;
     }
 
-    function createBlocks() {
+    hidden function getBlockHeightAndYPosition() {
+        // Create a random block height with a maximum height
+        // being the screen height - 5 times the radius of the pod
+        var blockHeight = Rand.nextInt(height - (5 * shapeSize));
+
+        // Choose a random Y position, keeping at least half the
+        // block on the screen
+        var yPos = Rand.nextInt(height - (blockHeight / 2));
+
+        return { "height" => blockHeight, "yPos" => yPos };
+    }
+
+    hidden function createBlocks() {
+        // Start the blocks out at halfway across the screen
+        // so that we don't end up with a block right in front
+        // of the user at the start of the game
         var currentX = width / 2;
 
         for (var i = 0; i < blocks.size(); ++i) {
-            var blockHeight = Rand.nextInt(height - (5 * shapeSize));
-            var yPos = Rand.nextInt(height - (blockHeight / 2));
+            var result = getBlockHeightAndYPosition();
 
-            blocks[i] = new Block(blockHeight, currentX, yPos);
+            blocks[i] = new Block(result["height"], currentX, result["yPos"]);
 
             // Update the X position for the next block
             currentX += (3 * blocks[i].width);
