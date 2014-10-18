@@ -1,46 +1,53 @@
 using Toybox.WatchUi as Ui;
 using Toybox.Graphics as Gfx;
-using Toybox.System as Sys;
 using Toybox.Timer as Timer;
 
-var started = false;
-var gameOver = false;
-var updateRate = 100;
+const updateRate = 100;
+
+var gameState = WAITING;
 var shapePositionY = 0;
 
 class HelicopterDelegate extends Ui.InputDelegate {
     var timer = new Timer.Timer();
 
     function callback() {
-        // On the first tap, start the game
-        // All other taps are considered input to the
-        // game, and we adjust the shape's Y position
-        if (started) {
+        // If we are waiting, the user has indicated they
+        // want to start a game, so move to the starting state
+        // and tell the UI to update
+        if (gameState == WAITING) {
+            gameState = STARTING;
+            Ui.requestUpdate();
+        } else if (gameState == STARTING) {
+            // We shouldn't be in this state in the input delegate
+        } else if (gameState == RUNNING) {
+            // The game is running, so a call in the input delegate
+            // means the user wants to float the pod up
             shapePositionY -= 10;
-        } else {
-            started = true;
+            Ui.requestUpdate();
+        } else if (gameState == FINISHED) {
+            // If the game is over, a tap indicates they want to
+            // start a new game, so move to the WAITING state
+            gameState = WAITING;
             Ui.requestUpdate();
         }
     }
 
     function onTap() {
-        if (gameOver) {
-            started = false;
-            gameOver = false;
-            Ui.requestUpdate();
-        } else {
-            callback();
-        }
+        callback();
     }
 
     function onHold() {
-        if (!gameOver) {
+        // We only want to process hold events if the
+        // game is currently running. If the game isn't running
+        // they should just tap on the screen to perform their action
+        if (gameState == RUNNING) {
             shapePositionY -= 5;
             timer.start(method(:callback), updateRate, true);
         }
     }
 
     function onRelease() {
+        // Always stop the timer when the hold is released
         timer.stop();
     }
 }
@@ -48,7 +55,6 @@ class HelicopterDelegate extends Ui.InputDelegate {
 class HelicopterView extends Ui.View {
     const shapeXPosition = 20;
     const shapeSize = 5;
-    var viewStarted = false;
     var blocks = new [3];
     var height = 0;
     var width = 0;
@@ -86,7 +92,7 @@ class HelicopterView extends Ui.View {
 
         // If we haven't started, set the initial position,
         // and create the initial blocks
-        if (!started) {
+        if (gameState == WAITING) {
             timer.stop();
             shapePositionY = height / 2;
 
@@ -106,23 +112,20 @@ class HelicopterView extends Ui.View {
 
         // If the user has clicked on the screen, but we haven't started
         // the processing on the view, start the timer
-        if (started && !viewStarted) {
+        if (gameState == STARTING) {
             timer.start(method(:onTimer), updateRate, true);
-            viewStarted = true;
+            gameState = RUNNING;
         }
 
         // If the bounds check fails, stop the timer and show
         // a game over screen
         if (!checkBounds()) {
             timer.stop();
-            gameOver = true;
+            gameState = FINISHED;
 
             dc.setColor(Gfx.COLOR_RED, Gfx.COLOR_TRANSPARENT);
             dc.drawText((width / 2), (height / 2), Gfx.FONT_LARGE, "Game Over!", Gfx.TEXT_JUSTIFY_CENTER);
             dc.drawText((width / 2), (height / 2) + 20, Gfx.FONT_SMALL, "Tap screen to play again", Gfx.TEXT_JUSTIFY_CENTER);
-
-            started = false;
-            viewStarted = false;
         }
     }
 
