@@ -47,7 +47,7 @@ class HelicopterDelegate extends Ui.InputDelegate {
 }
 
 class HelicopterView extends Ui.View {
-    const shapeHeight = 5;
+    const shapeSize = 5;
     var viewStarted = false;
     var blocks = new [3];
     var height = 0;
@@ -60,7 +60,7 @@ class HelicopterView extends Ui.View {
             blocks[i].x = blocks[i].x - 5;
 
             if ((blocks[i].x + blocks[i].width) < 0) {
-                var blockHeight = Rand.nextInt(height - (5 * shapeHeight));
+                var blockHeight = Rand.nextInt(height - (5 * shapeSize));
                 var yPos = Rand.nextInt(height - (blockHeight / 2));
 
                 blocks[i] = new Block(blockHeight, width, yPos);
@@ -94,7 +94,7 @@ class HelicopterView extends Ui.View {
 
         // Draw the player shape
         dc.setColor(Gfx.COLOR_BLUE, Gfx.COLOR_TRANSPARENT);
-        dc.fillCircle(shapePositionX, shapePositionY, shapeHeight);
+        dc.fillCircle(shapePositionX, shapePositionY, shapeSize);
 
         // Draw the blocks
         dc.setColor(Gfx.COLOR_GREEN, Gfx.COLOR_TRANSPARENT);
@@ -131,10 +131,13 @@ class HelicopterView extends Ui.View {
         var ok = true;
 
         // Verify not off the top/bottom
-        ok = ok && ((shapePositionY + (shapeHeight / 2)) < height);
-        ok = ok && ((shapePositionY - (shapeHeight / 2)) > 0);
+        ok = ok && ((shapePositionY + (shapeSize / 2)) < height);
+        ok = ok && ((shapePositionY - (shapeSize / 2)) > 0);
 
-        // TODO: check all blocks
+        // Check all blocks for intersections
+        for (var i = 0; i < blocks.size(); ++i) {
+            ok = ok && !blocks[i].intersects(shapePositionX, shapePositionY, shapeSize);
+        }
 
         return ok;
     }
@@ -143,7 +146,7 @@ class HelicopterView extends Ui.View {
         var currentX = width / 2;
 
         for (var i = 0; i < blocks.size(); ++i) {
-            var blockHeight = Rand.nextInt(height - (5 * shapeHeight));
+            var blockHeight = Rand.nextInt(height - (5 * shapeSize));
             var yPos = Rand.nextInt(height - (blockHeight / 2));
 
             blocks[i] = new Block(blockHeight, currentX, yPos);

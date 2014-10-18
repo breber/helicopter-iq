@@ -5,9 +5,21 @@ class Block {
         y = aY;
     }
 
-    function contains(aX, aY) {
-        // TODO: check if contains
-        return false;
+    function intersects(aX, aY, aSize) {
+        var thisRight = x + width;
+        var thisLeft = x;
+        var thisTop = y;
+        var thisBottom = y + height;
+
+        var otherRight = aX + (aSize / 2);
+        var otherLeft = aX - (aSize / 2);
+        var otherTop = aY + (aSize / 2);
+        var otherBottom = aY - (aSize / 2);
+
+        return !((otherRight < thisLeft) ||
+                 (thisRight < otherLeft) ||
+                 (otherTop > thisBottom) ||
+                 (thisTop > otherBottom));
     }
 
     const width = 20;
