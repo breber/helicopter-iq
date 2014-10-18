@@ -2,6 +2,7 @@ using Toybox.WatchUi as Ui;
 using Toybox.Graphics as Gfx;
 using Toybox.System as Sys;
 using Toybox.Lang as Lang;
+using Toybox.Timer as Timer;
 
 var started = false;
 var shapePositionX = 0;
@@ -27,6 +28,7 @@ class HelicopterView extends Ui.View {
     const shapeHeight = 5;
     var height = 0;
     var width = 0;
+    var timer = new Timer();
 
     //! Update the view
     function onUpdate(dc) {
