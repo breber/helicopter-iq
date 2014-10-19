@@ -16,10 +16,10 @@ class Block {
         var otherTop    = aY + aSize;
         var otherBottom = aY - aSize;
 
-        return !((otherRight < thisLeft   ) ||
-                 (thisRight  < otherLeft  ) ||
-                 (otherTop   > thisBottom ) ||
-                 (thisTop    > otherBottom));
+        return !((otherRight <= thisLeft   ) ||
+                 (thisRight  <= otherLeft  ) ||
+                 (otherTop   >= thisBottom ) ||
+                 (thisTop    >= otherBottom));
     }
 
     const width = 20;

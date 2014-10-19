@@ -5,12 +5,10 @@ using Toybox.Timer as Timer;
 const updateRate = 100;
 
 var gameState = WAITING;
-var shapePositionY = 0;
+var player;
 
 class HelicopterDelegate extends Ui.InputDelegate {
-    var timer = new Timer.Timer();
-
-    function callback() {
+    function onTap() {
         // If we are waiting, the user has indicated they
         // want to start a game, so move to the starting state
         // and tell the UI to update
@@ -22,8 +20,7 @@ class HelicopterDelegate extends Ui.InputDelegate {
         } else if (gameState == RUNNING) {
             // The game is running, so a call in the input delegate
             // means the user wants to float the pod up
-            shapePositionY -= 10;
-            Ui.requestUpdate();
+            player.raise();
         } else if (gameState == FINISHED) {
             // If the game is over, a tap indicates they want to
             // start a new game, so move to the WAITING state
@@ -32,36 +29,30 @@ class HelicopterDelegate extends Ui.InputDelegate {
         }
     }
 
-    function onTap() {
-        callback();
-    }
-
     function onHold() {
         // We only want to process hold events if the
         // game is currently running. If the game isn't running
         // they should just tap on the screen to perform their action
         if (gameState == RUNNING) {
-            shapePositionY -= 5;
-            timer.start(method(:callback), updateRate, true);
+            player.startRaise();
         }
     }
 
     function onRelease() {
-        // Always stop the timer when the hold is released
-        timer.stop();
+        if (gameState == RUNNING) {
+            player.stopRaise();
+        }
     }
 }
 
 class HelicopterView extends Ui.View {
-    const shapeXPosition = 20;
-    const shapeSize = 5;
     var blocks = new [3];
     var height = 0;
     var width = 0;
     var timer = new Timer.Timer();
 
     function callback() {
-        const blockSlideDistance = 5;
+        var blockSlideDistance = 5;
 
         // Slide the blocks over
         for (var i = 0; i < blocks.size(); ++i) {
@@ -75,8 +66,8 @@ class HelicopterView extends Ui.View {
             }
         }
 
-        // Slide the cursor down
-        shapePositionY += 5;
+        // Update the player's position
+        player.update();
 
         Ui.requestUpdate();
     }
@@ -94,7 +85,7 @@ class HelicopterView extends Ui.View {
         // and create the initial blocks
         if (gameState == WAITING) {
             timer.stop();
-            shapePositionY = height / 2;
+            player = new Player(height / 2);
 
             createBlocks();
         }
@@ -108,7 +99,7 @@ class HelicopterView extends Ui.View {
 
         // Draw the player shape
         dc.setColor(Gfx.COLOR_BLUE, Gfx.COLOR_TRANSPARENT);
-        dc.fillCircle(shapeXPosition, shapePositionY, shapeSize);
+        dc.fillCircle(player.x, player.y, player.size);
 
         // If the user has clicked on the screen, but we haven't started
         // the processing on the view, start the timer
@@ -135,12 +126,12 @@ class HelicopterView extends Ui.View {
         var ok = true;
 
         // Verify not off the top/bottom
-        ok = ok && ((shapePositionY + shapeSize) < height);
-        ok = ok && ((shapePositionY - shapeSize) > 0);
+        ok = ok && ((player.y + player.size) < height);
+        ok = ok && ((player.y - player.size) > 0);
 
         // Check all blocks for intersections
         for (var i = 0; i < blocks.size(); ++i) {
-            ok = ok && !blocks[i].intersects(shapeXPosition, shapePositionY, shapeSize);
+            ok = ok && !blocks[i].intersects(player.x, player.y, player.size);
         }
 
         return ok;
@@ -149,7 +140,7 @@ class HelicopterView extends Ui.View {
     hidden function getBlockHeightAndYPosition() {
         // Create a random block height with a maximum height
         // being the screen height - 5 times the radius of the pod
-        var blockHeight = Rand.nextInt(height - (5 * shapeSize));
+        var blockHeight = Rand.nextInt(height - (5 * player.size));
 
         // Choose a random Y position, keeping at least half the
         // block on the screen
