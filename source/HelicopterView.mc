@@ -60,7 +60,7 @@ class HelicopterView extends Ui.View {
     var width = 0;
     var timer = new Timer.Timer();
 
-    function onTimer() {
+    function callback() {
         const blockSlideDistance = 5;
 
         // Slide the blocks over
@@ -113,7 +113,7 @@ class HelicopterView extends Ui.View {
         // If the user has clicked on the screen, but we haven't started
         // the processing on the view, start the timer
         if (gameState == STARTING) {
-            timer.start(method(:onTimer), updateRate, true);
+            timer.start(method(:callback), updateRate, true);
             gameState = RUNNING;
         }
 

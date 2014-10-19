@@ -1,4 +1,4 @@
-enum GameState {
+enum {
     // We have a clean slate
     WAITING,
     // The user has indicated the game should start

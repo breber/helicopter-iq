@@ -1,12 +1,18 @@
+using Toybox.Math;
+
 class Rand {
     static function next() {
-        holdRand = holdRand * 214013 + 2531011;
-        return ((holdRand >> 16) & 0x7fff);
+        if (!initialized) {
+            Math.srand(0);
+            initialized = true;
+        }
+
+        return Math.rand();
     }
 
     static function nextInt(maxVal) {
         return next() % maxVal;
     }
 
-    hidden static var holdRand = 0;
+    hidden static var initialized = false;
 }
